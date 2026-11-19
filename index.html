@@ -1,10 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Proxy</title>
+<meta charset="UTF-8">
+<title>Proxy Link Builder</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.6;
+  }
+  h1 { color: #38bdf8; text-align: center; }
+  h2 { color: #94a3b8; margin-top: 2em; border-bottom: 1px solid #334155; padding-bottom: 6px; }
+  
+  .box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 24px;
+    margin: 16px 0;
+  }
+  
+  /* HUGE OBVIOUS INPUT STYLING */
+  .input-group {
+    background: #0b1220;
+    border: 2px dashed #f87171;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .input-group label {
+    display: block;
+    font-size: 1.2em;
+    font-weight: 900;
+    color: #f87171;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .input-group input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    background: #1e293b;
+    border: 2px solid #38bdf8;
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-size: 1.1em;
+    font-family: monospace;
+  }
+  .input-group input:focus { 
+    outline: none; 
+    border-color: #fbbf24;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+  }
+
+  /* SMALLER INPUT FOR THE PROXY URL */
+  .proxy-group {
+    background: #1e293b;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  .proxy-group label {
+    display: block;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+  }
+  .proxy-group input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    background: #0b1220;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-family: monospace;
+  }
+
+  pre {
+    background: #0b1220;
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    border-left: 4px solid #38bdf8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 1.05em;
+  }
+  button {
+    background: #38bdf8;
+    color: #0f172a;
+    border: none;
+    padding: 16px 24px;
+    border-radius: 6px;
+    font-weight: 900;
+    font-size: 1.1em;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+    transition: background 0.2s;
+  }
+  button:hover { background: #7dd3fc; }
+  
+  .output {
+    background: #0b1220;
+    border: 2px dashed #38bdf8;
+    padding: 16px;
+    border-radius: 6px;
+    margin-top: 20px;
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 1.1em;
+    color: #fbbf24;
+  }
+  .hint { color: #94a3b8; font-size: 0.9em; }
+</style>
 </head>
 <body>
-  <h1>Proxy is running!</h1>
-  <p><a href="/api/proxy?url=https%3A%2F%2Fexample.com">Test the proxy here</a></p>
+
+<h1>🔗 Proxy Link Builder</h1>
+
+<div class="box">
+  <h2>1. Your Final HTML Link</h2>
+  <p>Copy this code and put it on your website:</p>
+  <pre id="finalLink">&lt;a href="#"&gt;CLICK HERE&lt;/a&gt;</pre>
+</div>
+
+<div class="box">
+  <h2>2. Live Preview</h2>
+  <p>Click this link to test if your proxy works:</p>
+  <p style="font-size: 1.3em;"><a id="previewLink" href="#" target="_blank" rel="noopener">CLICK HERE</a></p>
+</div>
+
+<div class="box">
+  <h2>3. Link Builder</h2>
+  
+  <div class="proxy-group">
+    <label for="proxyUrl">Step A: Paste your Vercel Proxy URL here (Only need to do this once)</label>
+    <input type="text" id="proxyUrl" placeholder="https://mp4downloader-uvc4.vercel.app/api/proxy?url=https%3A%2F%2Fexample.com">
+  </div>
+
+  <div class="input-group">
+    <label for="targetUrl">👇👇 Step B: PASTE THE DESTINATION LINK HERE 👇👇</label>
+    <input type="text" id="targetUrl" placeholder="https://google.com">
+  </div>
+
+  <button id="generateBtn">GENERATE LINK</button>
+
+  <div class="output" id="output">
+    <strong>Your generated link is ready above in Section 1 ⬆️</strong>
+  </div>
+</div>
+
+<script>
+  const proxyInput = document.getElementById('proxyUrl');
+  const targetInput = document.getElementById('targetUrl');
+  const previewLink = document.getElementById('previewLink');
+  const finalLinkDisplay = document.getElementById('finalLink');
+  const outputBox = document.getElementById('output');
+
+  function updatePreview() {
+    const proxy = proxyInput.value.trim();
+    const target = targetInput.value.trim();
+    const text = "CLICK HERE";
+
+    if (!proxy || !target) {
+      finalLinkDisplay.textContent = '<a href="#">CLICK HERE</a>';
+      previewLink.href = '#';
+      outputBox.innerHTML = '<strong style="color: #f87171;">Waiting for links... Paste your Vercel URL in Step A, and your destination link in Step B.</strong>';
+      return;
+    }
+
+    const encoded = encodeURIComponent(target);
+    const fullHref = proxy + encoded;
+    const htmlSnippet = '<a href="' + fullHref + '" target="_blank" rel="noopener">' + text + '</a>';
+
+    // Update Section 1
+    finalLinkDisplay.textContent = htmlSnippet;
+    
+    // Update Section 2
+    previewLink.href = fullHref;
+    
+    // Update the success message in Section 3
+    outputBox.innerHTML = '<strong style="color: #4ade80;">✅ Link Generated! Scroll up to Section 1 to copy the HTML code.</strong>';
+  }
+
+  // Update automatically as you type
+  proxyInput.addEventListener('input', updatePreview);
+  targetInput.addEventListener('input', updatePreview);
+  
+  // Also update when clicking the button
+  document.getElementById('generateBtn').addEventListener('click', updatePreview);
+</script>
+
 </body>
 </html>
