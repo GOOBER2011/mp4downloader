@@ -12,7 +12,7 @@ export default async function handler(request, response) {
       throw new Error('Only http and https URLs are allowed.');
     }
   } catch (err) {
-    return response.status(400).send('Invalid URL provided: ' + err.message);
+    return response.status(400).send('Invalid URL: ' + err.message);
   }
 
   try {
@@ -25,12 +25,40 @@ export default async function handler(request, response) {
     });
 
     const contentType = upstreamResponse.headers.get('content-type');
-    if (contentType) {
-      response.setHeader('Content-Type', contentType);
+    
+    // If it's not HTML (e.g., an image, CSS, or JS file), just pass it through normally
+    if (!contentType || !contentType.includes('text/html')) {
+      if (contentType) response.setHeader('Content-Type', contentType);
+      const buffer = await upstreamResponse.arrayBuffer();
+      return response.status(upstreamResponse.status).send(Buffer.from(buffer));
     }
 
-    const body = await upstreamResponse.text();
-    return response.status(upstreamResponse.status).send(body);
+    // --- HTML REWRITING SECTION ---
+    let html = await upstreamResponse.text();
+    const baseUrl = parsed.origin;
+
+    // 1. Rewrite all standard links (<a href="...">)
+    html = html.replace(/(<a\s+[^>]*href=["'])([^"']+)(["'])/gi, (match, p1, url, p3) => {
+      return p1 + `/api/proxy?url=` + encodeURIComponent(new URL(url, baseUrl).toString()) + p3;
+    });
+
+    // 2. Rewrite all forms (like Google's search bar)
+    html = html.replace(/(<form\s+[^>]*action=["'])([^"']+)(["'])/gi, (match, p1, url, p3) => {
+      return p1 + `/api/proxy?url=` + encodeURIComponent(new URL(url, baseUrl).toString()) + p3;
+    });
+
+    // 3. Rewrite images (<img src="...">) so they actually load
+    html = html.replace(/(<img\s+[^>]*src=["'])([^"']+)(["'])/gi, (match, p1, url, p3) => {
+      return p1 + `/api/proxy?url=` + encodeURIComponent(new URL(url, baseUrl).toString()) + p3;
+    });
+
+    // 4. Rewrite CSS (<link href="...">) so pages don't look ugly
+    html = html.replace(/(<link\s+[^>]*href=["'])([^"']+)(["'])/gi, (match, p1, url, p3) => {
+      return p1 + `/api/proxy?url=` + encodeURIComponent(new URL(url, baseUrl).toString()) + p3;
+    });
+
+    response.setHeader('Content-Type', 'text/html');
+    return response.status(upstreamResponse.status).send(html);
 
   } catch (error) {
     return response.status(500).send('Error fetching the URL: ' + error.message);
